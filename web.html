@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Thin Film Thickness Calculator</title>
+<style>
+body {
+  font-family: sans-serif;
+}
+input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+button:hover {
+  opacity: 0.8;
+}
+.result {
+  margin-top: 20px;
+  font-size: 1.2em;
+}
+</style>
+</head>
+<body>
+
+<h1>Thin Film Thickness Calculator</h1>
+
+<p>This tool calculates the thickness of a thin film using data from a CSV file containing reflectance vs wavelength data.</p>
+
+<div>
+  <label for="csv-file">Upload CSV File:</label>
+  <input type="file" id="csv-file" accept=".csv">
+</div>
+
+<div>
+  <label for="delta-m">Number of Peaks/Valleys:</label>
+  <input type="number" id="delta-m" name="delta-m" required>
+</div>
+
+<div>
+  <label for="refractive-index">Refractive Index of Film:</label>
+  <input type="text" id="refractive-index" name="refractive-index" required>
+</div>
+
+<div>
+  <label for="angle-of-incidence">Angle of Incidence (degrees):</label>
+  <input type="number" id="angle-of-incidence" name="angle-of-incidence" required>
+</div>
+
+<div>
+  <label for="start-wavelength">Start Wavelength (nm):</label>
+  <input type="number" id="start-wavelength" name="start-wavelength" required>
+</div>
+
+<div>
+  <label for="end-wavelength">End Wavelength (nm):</label>
+  <input type="number" id="end-wavelength" name="end-wavelength" required>
+</div>
+
+<button onclick="calculateThickness()">Calculate Thickness</button>
+
+<div class="result" id="result"></div>
+
+<script>
+function calculateThickness() {
+  const fileInput = document.getElementById('csv-file');
+  const deltaM = parseFloat(document.getElementById('delta-m').value);
+  const refractiveIndex = parseFloat(document.getElementById('refractive-index').value);
+  const angleOfIncidence = parseFloat(document.getElementById('angle-of-incidence').value);
+  const startWavelength = parseFloat(document.getElementById('start-wavelength').value);
+  const endWavelength = parseFloat(document.getElementById('end-wavelength').value);
+
+  if (fileInput.files.length === 0) {
+    alert('Please select a CSV file.');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    const data = e.target.result;
+    const parsedData = parseCSV(data);
+    const peaksWavelength = findPeaks(parsedData);
+
+    const thetaRad = angleOfIncidence * (Math.PI / 180);
+    const thickness = calculateFilmThickness(deltaM, refractiveIndex, thetaRad, startWavelength, endWavelength);
+
+    document.getElementById('result').innerHTML = `
+      <p>Peaks in the reflectance vs wavelength data:</p>
+      <ul>${peaksWavelength.map(peak => `<li>${peak}</li>`).join('')}</li>
+      <p>The thickness of the thin film is: ${thickness.toFixed(2)} nm</p>
+    `;
+  }
+
+  reader.readAsText(file);
+}
+
+function parseCSV(data) {
+  const lines = data.split('\n');
+  const parsedData = [];
+  for (let i = 0; i < lines.length; i++) {
+    const row = lines[i].trim().split(',');
+    if (row.length === 2) {
+      parsedData.push([parseFloat(row[0]), parseFloat(row[1])]);
+    }
+  }
+  return parsedData;
+}
+
+function findPeaks(data) {
+  let peaks = [];
+  for (let i = 1; i < data.length - 1; i++) {
+    if (data[i][0] > data[i - 1][0] && data[i][0] > data[i + 1][0]) {
+      peaks.push(data[i][1]);
+    }
+  }
+  return peaks;
+}
+
+function calculateFilmThickness(deltaM, n, theta, lambda1, lambda2) {
+  return (deltaM / (2 * Math.sqrt((n**2) - (Math.sin(theta)**2)))) * (1 / ((1 / lambda1) - (1 / lambda2)));
+}
+</script>
+
+</body>
+</html>
